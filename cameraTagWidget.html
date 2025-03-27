@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Camera + Tagging Widget</title>
+    <style>
+      /* Basic styles for layout */
+      #camera-container {
+        position: relative;
+        width: 320px;
+        height: 240px;
+        border: 1px solid #ccc;
+        margin-bottom: 8px;
+      }
+      video {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+      #tag-menu {
+        position: absolute;
+        bottom: 10px;
+        left: 10px;
+        background-color: rgba(255, 255, 255, 0.8);
+        padding: 4px;
+        border-radius: 4px;
+        display: none; /* Initially hidden */
+      }
+      #capture-btn,
+      #tag-btn {
+        margin-right: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Camera Container -->
+    <div id="camera-container">
+      <video id="video" autoplay playsinline></video>
+      <!-- Tag Menu Overlay -->
+      <div id="tag-menu">
+        <label>
+          <input type="checkbox" value="301" class="tag-checkbox" /> 301
+        </label>
+        <br />
+        <label>
+          <input type="checkbox" value="601" class="tag-checkbox" /> 601
+        </label>
+        <br />
+        <label>
+          <input type="checkbox" value="719" class="tag-checkbox" /> 719
+        </label>
+        <br />
+        <!-- Add more tags or make this dynamic if needed -->
+      </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <button id="tag-btn">Tags</button>
+    <button id="capture-btn">Capture</button>
+
+    <script>
+      // 1. Access the user's camera
+      const video = document.getElementById('video');
+      navigator.mediaDevices
+        .getUserMedia({ video: true, audio: false })
+        .then((stream) => {
+          video.srcObject = stream;
+        })
+        .catch((err) => {
+          console.error("Camera access error:", err);
+        });
+
+      // 2. Toggle the tag menu
+      const tagMenu = document.getElementById('tag-menu');
+      const tagBtn = document.getElementById('tag-btn');
+      tagBtn.addEventListener('click', () => {
+        if (tagMenu.style.display === 'none') {
+          tagMenu.style.display = 'block';
+        } else {
+          tagMenu.style.display = 'none';
+        }
+      });
+
+      // 3. Capture the current frame & tags
+      const captureBtn = document.getElementById('capture-btn');
+      captureBtn.addEventListener('click', () => {
+        // Create a temporary canvas to draw the video frame
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        // Convert to base64 (PNG)
+        const imageData = canvas.toDataURL('image/png');
+
+        // Collect selected tags
+        const checkboxes = document.querySelectorAll('.tag-checkbox');
+        const selectedTags = [];
+        checkboxes.forEach((cb) => {
+          if (cb.checked) {
+            selectedTags.push(cb.value);
+          }
+        });
+
+        // 4. Send the data back to Appsmith (iFrame parent)
+        const payload = {
+          imageData: imageData,   // base64 image string
+          tags: selectedTags      // array of selected tag values
+        };
+        parent.postMessage(
+          {
+            type: "appsmith:payload",
+            message: payload
+          },
+          "*"
+        );
+      });
+    </script>
+  </body>
+</html>
