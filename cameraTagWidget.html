@@ -4,7 +4,6 @@
     <meta charset="utf-8" />
     <title>Camera + Tagging Widget</title>
     <style>
-      /* Basic styles for layout */
       #camera-container {
         position: relative;
         width: 320px;
@@ -24,7 +23,7 @@
         background-color: rgba(255, 255, 255, 0.8);
         padding: 4px;
         border-radius: 4px;
-        display: none; /* Initially hidden */
+        display: none;
       }
       #capture-btn,
       #tag-btn {
@@ -33,89 +32,45 @@
     </style>
   </head>
   <body>
-    <!-- Camera Container -->
     <div id="camera-container">
       <video id="video" autoplay playsinline></video>
-      <!-- Tag Menu Overlay -->
       <div id="tag-menu">
-        <label>
-          <input type="checkbox" value="301" class="tag-checkbox" /> 301
-        </label>
-        <br />
-        <label>
-          <input type="checkbox" value="601" class="tag-checkbox" /> 601
-        </label>
-        <br />
-        <label>
-          <input type="checkbox" value="719" class="tag-checkbox" /> 719
-        </label>
-        <br />
-        <!-- Add more tags or make this dynamic if needed -->
+        <label><input type="checkbox" value="301" class="tag-checkbox" /> 301</label><br />
+        <label><input type="checkbox" value="601" class="tag-checkbox" /> 601</label><br />
+        <label><input type="checkbox" value="719" class="tag-checkbox" /> 719</label><br />
       </div>
     </div>
 
-    <!-- Action Buttons -->
     <button id="tag-btn">Tags</button>
     <button id="capture-btn">Capture</button>
 
     <script>
-      // 1. Access the user's camera
       const video = document.getElementById('video');
-      navigator.mediaDevices
-        .getUserMedia({ video: true, audio: false })
-        .then((stream) => {
-          video.srcObject = stream;
-        })
-        .catch((err) => {
-          console.error("Camera access error:", err);
-        });
 
-      // 2. Toggle the tag menu
+      // Try rear camera first, fallback to any available
+      navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { exact: "environment" } },
+        audio: false
+      })
+      .then((stream) => {
+        video.srcObject = stream;
+      })
+      .catch((err) => {
+        console.warn("Rear camera not found. Falling back to default camera.", err);
+        navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+          .then((stream) => {
+            video.srcObject = stream;
+          })
+          .catch((error) => {
+            console.error("Camera access error:", error);
+          });
+      });
+
+      // Toggle tag menu
       const tagMenu = document.getElementById('tag-menu');
-      const tagBtn = document.getElementById('tag-btn');
-      tagBtn.addEventListener('click', () => {
-        if (tagMenu.style.display === 'none') {
-          tagMenu.style.display = 'block';
-        } else {
-          tagMenu.style.display = 'none';
-        }
+      document.getElementById('tag-btn').addEventListener('click', () => {
+        tagMenu.style.display = tagMenu.style.display === 'none' ? 'block' : 'none';
       });
 
-      // 3. Capture the current frame & tags
-      const captureBtn = document.getElementById('capture-btn');
-      captureBtn.addEventListener('click', () => {
-        // Create a temporary canvas to draw the video frame
-        const canvas = document.createElement('canvas');
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-        // Convert to base64 (PNG)
-        const imageData = canvas.toDataURL('image/png');
-
-        // Collect selected tags
-        const checkboxes = document.querySelectorAll('.tag-checkbox');
-        const selectedTags = [];
-        checkboxes.forEach((cb) => {
-          if (cb.checked) {
-            selectedTags.push(cb.value);
-          }
-        });
-
-        // 4. Send the data back to Appsmith (iFrame parent)
-        const payload = {
-          imageData: imageData,   // base64 image string
-          tags: selectedTags      // array of selected tag values
-        };
-        parent.postMessage(
-          {
-            type: "appsmith:payload",
-            message: payload
-          },
-          "*"
-        );
-      });
-    </script>
-  </body>
-</html>
+      // Capture photo and selected tags
+      document.getElementById('capture-btn').addEventListener('click', ()
